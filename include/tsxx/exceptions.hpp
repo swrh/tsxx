@@ -1,6 +1,9 @@
 #if !defined(_TSXX_EXCEPTIONS_HPP_)
 #define _TSXX_EXCEPTIONS_HPP_
 
+#include <string>
+#include <exception>
+
 namespace tsxx
 {
 namespace exceptions
@@ -18,21 +21,9 @@ stdio_error
 : public exception
 {
 public:
-	stdio_error(int number) throw()
-		: number(number)
-	{
-		description = ::strerror(number);
-	}
-
-	~stdio_error() throw()
-	{
-	}
-
-	virtual const char *
-	what() const throw()
-	{
-		return description.c_str();
-	}
+	stdio_error(int number) throw();
+	virtual ~stdio_error() throw();
+	virtual const char *what() const throw();
 
 private:
 	const int number;
