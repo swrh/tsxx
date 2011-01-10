@@ -237,7 +237,9 @@ public:
 			return false;
 		}
 
-		int val = ::open("/dev/mem", O_RDWR);
+		// We must use O_SYNC argument or else we WILL crash or get
+		// random access while acessing registers.
+		int val = ::open("/dev/mem", O_RDWR | O_SYNC);
 		if (val == -1)
 			return false;
 
@@ -308,10 +310,12 @@ public:
 			throw stdio_error(EINVAL);
 	}
 
+	// Force data access using the "ldrb" instruction -- don't rely on
+	// compiler optimization by using pointers.
 	inline uint8_t
 	read()
 	{
-		uint8_t ret;
+		volatile uint8_t ret;
 		asm volatile (
 			"ldrb %0, [ %1 ]\n"
 			: "=r" (ret)
@@ -321,6 +325,8 @@ public:
 		return ret;
 	}
 
+	// Force data access using the "strb" instruction -- don't rely on
+	// compiler optimization by using pointers.
 	inline void
 	write(uint8_t dat)
 	{
@@ -351,14 +357,12 @@ public:
 			throw stdio_error(EINVAL);
 	}
 
-	// We can't expect that a dereference of an unsigned short * always
-	// produces a ldrh or strh since the compiler may choose to use
-	// a byte write instead. Hence, we emit the peeks and pokes using
-	// inline assembler. --JO
+	// Force data access using the "ldrh" instruction -- don't rely on
+	// compiler optimization by using pointers.
 	inline uint16_t
 	read()
 	{
-		uint16_t ret;
+		volatile uint16_t ret;
 		asm volatile (
 			"ldrh %0, [ %1 ]\n"
 			: "=r" (ret)
@@ -368,6 +372,8 @@ public:
 		return ret;
 	}
 
+	// Force data access using the "strh" instruction -- don't rely on
+	// compiler optimization by using pointers.
 	inline void
 	write(uint16_t dat)
 	{
@@ -398,10 +404,12 @@ public:
 			throw stdio_error(EINVAL);
 	}
 
+	// Force data access using the "ldr" instruction -- don't rely on
+	// compiler optimization by using pointers.
 	inline uint32_t
 	read()
 	{
-		uint32_t ret;
+		volatile uint32_t ret;
 		asm volatile (
 			"ldr %0, [ %1 ]\n"
 			: "=r" (ret)
@@ -411,6 +419,8 @@ public:
 		return ret;
 	}
 
+	// Force data access using the "str" instruction -- don't rely on
+	// compiler optimization by using pointers.
 	inline void
 	write(uint32_t dat)
 	{
