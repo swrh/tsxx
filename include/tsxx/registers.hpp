@@ -1,6 +1,8 @@
 #if !defined(_TSXX_REGISTERS_HPP_)
 #define _TSXX_REGISTERS_HPP_
 
+#include <stdint.h>
+
 #include <tsxx/exceptions.hpp>
 
 namespace tsxx
@@ -10,17 +12,12 @@ namespace registers
 
 // WordReg
 class
-reg8bits
+reg8
 {
 public:
 	typedef uint8_t word_type;
 
-	reg8bits(void *p)
-		: address(reinterpret_cast<unsigned long>(p))
-	{
-		if (p == NULL)
-			throw tsxx::exceptions::stdio_error(EINVAL);
-	}
+	reg8(void *p);
 
 	// Force data access using the "ldrb" instruction -- don't rely on
 	// compiler optimization by using pointers.
@@ -57,17 +54,12 @@ private:
 
 // WordReg
 class
-reg16bits
+reg16
 {
 public:
 	typedef uint16_t word_type;
 
-	reg16bits(void *p)
-		: address(reinterpret_cast<unsigned long>(p))
-	{
-		if (p == NULL)
-			throw tsxx::exceptions::stdio_error(EINVAL);
-	}
+	reg16(void *p);
 
 	// Force data access using the "ldrh" instruction -- don't rely on
 	// compiler optimization by using pointers.
@@ -104,17 +96,12 @@ private:
 
 // WordReg
 class
-reg32bits
+reg32
 {
 public:
 	typedef uint32_t word_type;
 
-	reg32bits(void *p)
-		: address(reinterpret_cast<unsigned long>(p))
-	{
-		if (p == NULL)
-			throw tsxx::exceptions::stdio_error(EINVAL);
-	}
+	reg32(void *p);
 
 	// Force data access using the "ldr" instruction -- don't rely on
 	// compiler optimization by using pointers.

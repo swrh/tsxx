@@ -1,6 +1,7 @@
 #if !defined(_TSXX_PORTS_HPP_)
 #define _TSXX_PORTS_HPP_
 
+#include <tsxx/interfaces.hpp>
 #include <tsxx/registers.hpp>
 #include <tsxx/system.hpp>
 
@@ -102,9 +103,9 @@ private:
 
 };
 
-typedef wordport<tsxx::registers::reg8bits> port8;
-typedef wordport<tsxx::registers::reg16bits> port16;
-typedef wordport<tsxx::registers::reg32bits> port32;
+typedef wordport<tsxx::registers::reg8> port8;
+typedef wordport<tsxx::registers::reg16> port16;
+typedef wordport<tsxx::registers::reg32> port32;
 typedef bitport<port8> bport8;
 typedef bitport<port16> bport16;
 typedef bitport<port32> bport32;
