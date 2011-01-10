@@ -1,6 +1,6 @@
 # Makefile
 
-PROG=			tsxx
+LIB=			tsxx
 
 SRCS=			\
 			src/tsxx/exceptions/stdio_error.cpp \
@@ -14,8 +14,7 @@ SRCS=			\
 			src/tsxx/ts7300/board.cpp \
 			src/tsxx/ts7300/devices/lcd.cpp \
 			src/tsxx/ts7300/devices/spi.cpp \
-			src/tsxx/ts7300/devices/xdio.cpp \
-			main.cpp
+			src/tsxx/ts7300/devices/xdio.cpp
 
 INCDIRS=		include
 CROSS_COMPILE=		arm-linux-gnu-
