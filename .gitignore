@@ -1,0 +1,4 @@
+tsxx
+*.o
+*.lo
+.libs
