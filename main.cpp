@@ -26,9 +26,6 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/noncopyable.hpp>
 
-#define SPI_PAGE			0x808a0000
-#define XDIO_PAGE			0x72000040
-
 #define LOG(x) (std::clog << __FILE__ << ":" << __LINE__ << ": " << (x) << std::endl)
 
 #define FIXME() LOG("FIXME")
@@ -37,10 +34,13 @@
 
 extern const char *__progname;
 
+/**
+ * @warning This function hasn't been calibrated yet.
+ */
 inline void
 nssleep(unsigned int ns)
 {
-	volatile unsigned int loop = ns * 10;
+	volatile unsigned int loop = ns * 3;
 	asm volatile (
 		"1:\n"
 		"subs %1, %1, #1;\n"
@@ -473,7 +473,6 @@ binport
 public:
 	virtual void set() = 0;
 	virtual void unset() = 0;
-
 };
 
 }
@@ -486,12 +485,12 @@ wordport
 {
 public:
 	wordport(CopyableMemoryRegion region)
-		: reg(region.get_pointer())
+		: mem(region), reg(mem.get_pointer())
 	{
 	}
 
 	wordport(CopyableMemoryRegion region, unsigned int param)
-		: reg(region.get_pointer(), param)
+		: mem(region), reg(mem.get_pointer(), param)
 	{
 	}
 
@@ -512,6 +511,7 @@ public:
 	typedef typename WordReg::word_type word_type;
 
 protected:
+	CopyableMemoryRegion mem;
 	WordReg reg;
 
 };
@@ -880,7 +880,7 @@ public:
 
 			// Sleep 200ns at least.
 			nssleep(200);
-		} while ((d & data_bit_busy) != 0 && tries++ < 1000);
+		} while ((d & data_bit_busy) != 0 && tries++ < 1024);
 
 		return (d & data_bit_busy) == 0;
 	}
@@ -906,7 +906,7 @@ class
 xdio
 {
 private:
-	enum { BASE_ADDR = XDIO_PAGE };
+	enum { BASE_ADDR = 0x72000040 };
 public:
 	/**
 	 * @param n The number of the XDIO port. Can be 0 (XDIO1) or 1 (XDIO2).
@@ -921,6 +921,12 @@ public:
 		if (n > 1)
 			throw ts7x::stdio_error(EINVAL); // FIXME use the correct exception
 
+		mode = UNINITIALIZED;
+	}
+
+	void
+	init()
+	{
 		read_conf();
 	}
 
@@ -930,6 +936,7 @@ private:
 		MODE_EDGEQUADCNTR = 0x01,
 		MODE_INPULSTIMER = 0x02,
 		MODE_PWM = 0x03,
+		UNINITIALIZED,
 	} mode;
 
 	void
@@ -948,6 +955,7 @@ private:
 		case MODE_INPULSTIMER:
 		case MODE_PWM:
 			break;
+		case UNINITIALIZED:
 		default:
 			throw ts7x::stdio_error(EINVAL); // FIXME use the correct exception
 		}
@@ -987,44 +995,30 @@ class
 spi
 {
 private:
-	enum { BASE_ADDR = SPI_PAGE };
+	enum { BASE_ADDR = 0x808a0000 };
 public:
-	spi(ts7x::memory &memory, unsigned long addr)
-		: control_port(memory.get_region(BASE_ADDR + 0x04)),
-		status_port(memory.get_region(BASE_ADDR + 0x0c)),
-		data_port(memory.get_region(BASE_ADDR + 0x08)),
-		tx_bit(control_port, 4),
-		busy_bit(status_port, 4),
-		inp_bit(status_port, 2)
+	spi(ts7x::memory &memory)
+		: ctrl(memory.get_region(BASE_ADDR + 0x04)),
+		status(memory.get_region(BASE_ADDR + 0x0c)),
+		data(memory.get_region(BASE_ADDR + 0x08)),
+		tx_bit(ctrl, 4),
+		busy_bit(status, 4),
+		inp_bit(status, 2)
 	{
-	}
-
-	~spi()
-	{
-		clear();
 	}
 
 public:
 	bool
-	add_chip(unsigned int id, ts7x::interfaces::binport *cs)
+	add_chip(unsigned int id, ts7x::interfaces::binport &cs)
 	{
-		if (cs == NULL || chips.find(id) != chips.end())
+		if (chips.find(id) != chips.end())
 			return false;
 
-		cs->unset();
+		cs.unset();
 
-		chips.insert(std::pair<unsigned int, ts7x::interfaces::binport *>(id, cs));
+		chips.insert(std::pair<unsigned int, ts7x::interfaces::binport &>(id, cs));
 
 		return true;
-	}
-
-	void
-	clear()
-	{
-		std::map<unsigned int, ts7x::interfaces::binport *>::iterator cs;
-		for (cs = chips.begin(); cs != chips.end(); cs++)
-			delete cs->second;
-		chips.clear();
 	}
 
 	void
@@ -1033,52 +1027,50 @@ public:
 		tx_bit.set();
 		FIXME(); while (busy_bit.get());
 		tx_bit.unset();
-		FIXME(); while (busy_bit.get());
+		FIXME(); while (busy_bit.get()); // Is this really necessary?
 		FIXME(); while (inp_bit.get())
-			(void)data_port.read();
+			(void)data.read();
 	}
 
 	bool
-	writenread(unsigned int id, std::vector<uint8_t> rw_data)
+	writenread(unsigned int id, std::vector<uint8_t> &rw_data)
 	{
 		return writenread(id, rw_data, rw_data);
 	}
 
 	bool
-	writenread(unsigned int id, const std::vector<uint8_t> write_data, std::vector<uint8_t> read_data)
+	writenread(unsigned int id, const std::vector<uint8_t> &write_data, std::vector<uint8_t> &read_data)
 	{
-		std::map<unsigned int, ts7x::interfaces::binport *>::iterator chip = chips.find(id);
+		std::map<unsigned int, ts7x::interfaces::binport &>::iterator chip = chips.find(id);
 		if (chip != chips.end())
 			return false;
 
-		for (std::vector<uint8_t>::const_iterator w = write_data.begin(); w != write_data.end(); w++)
-			data_port.write(*w);
+		if (read_data.size() != write_data.size())
+			read_data.resize(write_data.size());
 
-		chip->second->set();
+		for (std::vector<uint8_t>::const_iterator w = write_data.begin(); w != write_data.end(); w++)
+			data.write(*w);
+
+		chip->second.set();
 
 		tx_bit.set();
 		FIXME(); while (busy_bit.get());
 
-		chip->second->unset();
+		chip->second.unset();
 
 		for (std::vector<uint8_t>::iterator w = read_data.begin(); w != read_data.end(); w++)
-			*w = data_port.read();
+			*w = data.read();
 		tx_bit.unset();
 
 		return true;
 	}
 
 protected:
-	std::map<unsigned int, ts7x::interfaces::binport *> chips;
+	std::map<unsigned int, ts7x::interfaces::binport &> chips;
 
 private:
-	/// SPI control register
-	ts7x::ports::port16 control_port;
-	/// SPI status register
-	ts7x::ports::port16 status_port;
-	/// SPI data register
-	ts7x::ports::port16 data_port;
-
+	/// SPI registers.
+	ts7x::ports::port16 ctrl, status, data;
 	ts7x::ports::bport16 tx_bit, busy_bit, inp_bit;
 
 };
@@ -1089,30 +1081,51 @@ class
 board
 {
 public:
-	board(ts7x::memory &memory)
-		: xdio2(memory, 1), dio1(memory), lcd(memory)
+	board(ts7x::memory &mem)
+		: memory(mem), xdio2(memory, 1), dio1(memory), lcd(memory)
 	{
 	}
 
-	ts7300::devices::xdio &
+	void
+	init()
+	{
+		// ATTENTION: Always set this bit to 0 or else you might
+		// "brick" your board forever while using the SPI bus. Setting
+		// it to one will enable the EEPROM boot chip and you might end
+		// up overwriting the boot magic word "CRUS".
+		//
+		// For reference check TS-7300 MANUAL of Apr 2010, page 14.
+		//
+		// PS: Believe me, I've done this. I've seen the RLOD (Red Led
+		// Of Death). =(
+		ts7x::ports::bport8 eeprom_cs_bit(memory.get_region(0x23000000), 0);
+		eeprom_cs_bit.unset();
+
+		xdio2.init();
+		lcd.init();
+	}
+
+	inline ts7300::devices::xdio &
 	get_xdio2()
 	{
 		return xdio2;
 	}
 
-	ts7300::devices::dio1 &
+	inline ts7300::devices::dio1 &
 	get_dio1()
 	{
 		return dio1;
 	}
 
-	ts7300::devices::lcd &
+	inline ts7300::devices::lcd &
 	get_lcd()
 	{
 		return lcd;
 	}
 
 private:
+	ts7x::memory &memory;
+
 	ts7300::devices::xdio xdio2;
 	ts7300::devices::dio1 dio1;
 	ts7300::devices::lcd lcd;
@@ -1126,65 +1139,13 @@ main(int argc, char *argv[])
 {
 	try {
 		ts7x::memory memory;
-		std::cout << "opening memory..." << std::endl;
 		if (!memory.open())
 			err(EXIT_FAILURE, "error opening memory");
 
-		std::cout << "allocating registers..." << std::endl;
-		ts7x::ports::port8 data(memory.get_region(0x80840004));
-		ts7x::ports::port8 ddr(memory.get_region(0x80840014));
-
-		std::cout << "dumping registers..." << std::endl;
-		std::cout << "\tddr: " << num2hex(ddr.read()) << std::endl;
-		std::cout << "\tdata: " << num2hex(data.read()) << std::endl;
-
 		ts7300::board ts(memory);
+		ts.init();
 
-		std::cout << "dumping registers..." << std::endl;
-		std::cout << "\tddr: " << num2hex(ddr.read()) << std::endl;
-		std::cout << "\tdata: " << num2hex(data.read()) << std::endl;
-
-		std::cout << "setting registers..." << std::endl;
-		ts.get_xdio2().set_mode_dio();
-
-		std::cout << "dumping registers..." << std::endl;
-		std::cout << "\tddr: " << num2hex(ddr.read()) << std::endl;
-		std::cout << "\tdata: " << num2hex(data.read()) << std::endl;
-
-		std::cout << "setting registers..." << std::endl;
-		ts.get_dio1().set_dir(0x01);
-
-		std::cout << "dumping registers..." << std::endl;
-		std::cout << "\tddr: " << num2hex(ddr.read()) << std::endl;
-		std::cout << "\tdata: " << num2hex(data.read()) << std::endl;
-
-		std::cout << "setting registers..." << std::endl;
-		ts.get_dio1().write(0x01);
-
-		std::cout << "dumping registers..." << std::endl;
-		std::cout << "\tddr: " << num2hex(ddr.read()) << std::endl;
-		std::cout << "\tdata: " << num2hex(data.read()) << std::endl;
-
-		std::cout << "setting registers..." << std::endl;
-		ddr.write(0xff);
-		data.write(0x12);
-
-		std::cout << "dumping registers..." << std::endl;
-		std::cout << "\tddr: " << num2hex(ddr.read()) << std::endl;
-		std::cout << "\tdata: " << num2hex(data.read()) << std::endl;
-
-#if 0
-		std::cout << "opening lcd..." << std::endl;
-		ts7300::devices::lcd lcd(memory);
-
-		std::cout << "initializing lcd..." << std::endl;
-		lcd.init();
-
-		std::string str = "testing...";
-		std::cout << "printing \"" << str << "\"..." << std::endl;
-		lcd.print(str);
-#endif
-
+		ts.get_lcd().print("testing...");
 	} catch (ts7x::stdio_error &e) {
 		std::cerr << __progname << ": stdio exception: " << e.what() << std::endl;
 		exit(EXIT_FAILURE);
