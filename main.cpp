@@ -37,6 +37,32 @@
 
 extern const char *__progname;
 
+inline void
+nssleep(unsigned int ns)
+{
+	volatile unsigned int loop = ns * 10;
+	asm volatile (
+		"1:\n"
+		"subs %1, %1, #1;\n"
+		"bne 1b;\n"
+		: "=r" ((loop)) : "r" ((loop))
+	);
+}
+
+template <typename T> std::string
+num2hex(T value)
+{
+	std::ostringstream stream;
+
+	stream << "0x"
+		<< std::setfill('0')
+		<< std::setw(sizeof(T) * 2)
+		<< std::setbase(16)
+		<< static_cast<unsigned long long int>(value);
+
+	return stream.str();
+}
+
 namespace ts7x {
 
 class
@@ -469,6 +495,8 @@ public:
 	{
 	}
 
+	// Force data access using the "strb" instruction -- don't rely on
+	// compiler optimization by using pointers.
 	inline void
 	write(typename WordReg::word_type word)
 	{
@@ -504,6 +532,8 @@ public:
 		write(false);
 	}
 
+	// Force data access using the "strh" instruction -- don't rely on
+	// compiler optimization by using pointers.
 	inline void
 	set()
 	{
@@ -585,6 +615,12 @@ public:
 		data_port.write(word);
 	}
 
+	typename WordPort::word_type
+	read()
+	{
+		return data_port.read();
+	}
+
 private:
 	WordPort data_port;
 	WordPort ddr_port;
@@ -606,7 +642,7 @@ class
 dio1
 	: public ts7x::ports::dioport<ts7x::ports::port8>
 {
-	// TODO not yet tested
+	// TODO not tested yet
 private:
 	enum { BASE_ADDR = 0x80840000 };
 public:
@@ -623,30 +659,241 @@ public:
 class
 lcd
 {
-	// TODO not yet finished
+#define LCD_CMD_ROW0			(0x80 | 0x00)
+#define LCD_CMD_ROW1			(0x80 | 0x40)
+#define LCD_CMD_ROW2			(0x80 | 0x14)
+#define LCD_CMD_ROW3			(0x80 | 0x54)
+#define LCD_CMD_ROW(x)			(x == 1 ? LCD_CMD_ROW1 : x == 2 ? LCD_CMD_ROW2 : x == 3 ? LCD_CMD_ROW3 : LCD_CMD_ROW0)
+
+#define LCD_CMD_CLEAR			0x0001
+#define LCD_CMD_HOME			0x0002
+
+#define LCD_CMD_ENTRY			0x0004
+#define LCD_BIT_ENTRY_DIR_RIGHT		0x0002
+#define LCD_BIT_ENTRY_DIR_LEFT		0x0000
+
+#define LCD_CMD_CTRL			0x0008
+#define LCD_BIT_CTRL_BLNK_OFF		0x0000
+#define LCD_BIT_CTRL_BLNK_ON		0x0001
+#define LCD_BIT_CTRL_CUR_OFF		0x0000
+#define LCD_BIT_CTRL_CUR_ON		0x0002
+#define LCD_BIT_CTRL_DSP_OFF		0x0000
+#define LCD_BIT_CTRL_DSP_ON		0x0004
+
+#define LCD_CMD_FNSET			0x0020
+#define LCD_BIT_FNSET_FONT_5x8		0x0000
+#define LCD_BIT_FNSET_FONT_5x11		0x0004
+#define LCD_BIT_FNSET_NLINES_1LIN	0x0000
+#define LCD_BIT_FNSET_NLINES_2LIN	0x0008
+#define LCD_BIT_FNSET_DATLEN_4BIT	0x0000
+#define LCD_BIT_FNSET_DATLEN_8BIT	0x0010
+
+#define LCD_CMD_CGRAM			0x0040
+#define LCD_CMD_DDRAM			0x0080
+#define LCD_CMD_RDSTAT			0x0100
+#define LCD_CMD_WRDATA			0x0200
+#define LCD_CMD_RDDATA			0x0300
+	// TODO not finished yet
 private:
 	enum { BASE_ADDR = 0x80840000 };
 public:
 	lcd(ts7x::memory &memory)
-		: lcd_data(ts7x::ports::port8(memory.get_region(BASE_ADDR + 0x00)), ts7x::ports::port8(memory.get_region(BASE_ADDR + 0x10))),
-		lcd_data7(ts7x::ports::port8(memory.get_region(BASE_ADDR + 0x08)), ts7x::ports::port8(memory.get_region(BASE_ADDR + 0x18))),
-		mask_lcd_data(0x7f),
-		mask_lcd_data7(0x01)
+		: data(ts7x::ports::port8(memory.get_region(BASE_ADDR + 0x00)), ts7x::ports::port8(memory.get_region(BASE_ADDR + 0x10))),
+		data7(ts7x::ports::port8(memory.get_region(BASE_ADDR + 0x08)), ts7x::ports::port8(memory.get_region(BASE_ADDR + 0x18))),
+		data_mask(0x7f), data7_mask(0x01),
+		data_bit_busy(0x80),
+		ctrl(ts7x::ports::port8(memory.get_region(BASE_ADDR + 0x40)), ts7x::ports::port8(memory.get_region(BASE_ADDR + 0x44))),
+		ctrl_bit_en(0x08), ctrl_bit_rs(0x10), ctrl_bit_wr(0x20)
 	{
 	}
 
 	void
 	init()
 	{
-		lcd_data.set_dir(mask_lcd_data | lcd_data.get_dir());
-		lcd_data7.set_dir(mask_lcd_data7 | lcd_data.get_dir());
+		// Set LCD control pins as outputs.
+		ctrl.set_dir(ctrl.get_dir() | ctrl_bit_en | ctrl_bit_rs | ctrl_bit_wr);
+
+		// De-assert EN and RS.
+		ctrl.write(ctrl.read() & ~(ctrl_bit_rs | ctrl_bit_en));
+
+		usleep(15000);
+		command(LCD_CMD_FNSET |
+		    LCD_BIT_FNSET_FONT_5x8 |
+		    LCD_BIT_FNSET_NLINES_2LIN |
+		    LCD_BIT_FNSET_DATLEN_8BIT);
+		usleep(4100);
+		command(LCD_CMD_FNSET |
+		    LCD_BIT_FNSET_FONT_5x8 |
+		    LCD_BIT_FNSET_NLINES_2LIN |
+		    LCD_BIT_FNSET_DATLEN_8BIT);
+		usleep(100);
+		command(LCD_CMD_FNSET |
+		    LCD_BIT_FNSET_FONT_5x8 |
+		    LCD_BIT_FNSET_NLINES_2LIN |
+		    LCD_BIT_FNSET_DATLEN_8BIT);
+		usleep(39);
+		wait();
+
+		command(LCD_CMD_FNSET |
+		    LCD_BIT_FNSET_FONT_5x8 |
+		    LCD_BIT_FNSET_NLINES_2LIN |
+		    LCD_BIT_FNSET_DATLEN_8BIT);
+		wait();
+
+		command(LCD_CMD_ENTRY |
+		    LCD_BIT_ENTRY_DIR_RIGHT);
+		usleep(39);
+		wait();
+
+		command(LCD_CMD_CLEAR);
+		usleep(1530);
+		wait();
+
+		command(LCD_CMD_CTRL |
+		    LCD_BIT_CTRL_BLNK_OFF |
+		    LCD_BIT_CTRL_CUR_OFF |
+		    LCD_BIT_CTRL_DSP_ON);
+		wait();
+
+		command(LCD_CMD_HOME);
+		usleep(1530);
+		wait();
+	}
+
+	void
+	print(std::string str)
+	{
+		print(str.c_str(), str.length());
+	}
+
+	void
+	print(const void *p, std::size_t len)
+	{
+		// Set LCD data pins as outputs.
+		data.set_dir(data.get_dir() | data_mask);
+		data7.set_dir(data7.get_dir() | data7_mask);
+
+		ts7x::ports::port8::word_type c = ctrl.read();
+
+		for (const uint8_t *s = static_cast<const uint8_t *>(p); len-- > 0; s++) {
+			// Write data to be sent.
+			data.write((data.read() & ~data_mask) | (*s & data_mask));
+			data7.write((data7.read() & ~data7_mask) | ((*s >> 7) & data7_mask));
+
+			// Assert WR and RS.
+			c = (c & ~ctrl_bit_wr) | ctrl_bit_rs;
+			ctrl.write(c);
+
+			// Sleep 100ns at least.
+			nssleep(100);
+
+			// Assert EN.
+			c |= ctrl_bit_en;
+			ctrl.write(c);
+
+			// Sleep 300ns at least.
+			nssleep(300);
+
+			// De-assert EN.
+			c &= ~ctrl_bit_en;
+			ctrl.write(c);
+
+			// Sleep 200ns at least.
+			nssleep(200);
+		}
+	}
+
+	void
+	command(uint8_t cmd)
+	{
+		ts7x::ports::port8::word_type c = ctrl.read();
+
+		// Set LCD data pins as outputs.
+		data.set_dir(data.get_dir() | data_mask);
+		data7.set_dir(data7.get_dir() | data7_mask);
+
+		// 20110110 XXX Is this block really necessary?
+#if 0
+		// Assert RS.
+		c |= ctrl_bit_rs;
+		ctrl.write(c);
+#endif
+
+		// Write data to be sent.
+		data.write((data.read() & ~data_mask) | (cmd & data_mask));
+		data7.write((data7.read() & ~data7_mask) | ((cmd >> 7) & data7_mask));
+
+		c &= ~(ctrl_bit_rs | ctrl_bit_wr); // de-assert RS, assert WR
+		ctrl.write(c);
+
+		// Sleep 100ns at least.
+		nssleep(100);
+
+		// step 3, assert EN
+		c |= ctrl_bit_en;
+		ctrl.write(c);
+
+		// Sleep 300ns at least.
+		nssleep(300);
+
+		// step 5, de-assert EN
+		c &= ~ctrl_bit_en; // de-assert EN
+		ctrl.write(c);
+
+		// Sleep 200ns at least.
+		nssleep(200);
+	}
+
+	bool
+	wait()
+	{
+		unsigned int tries;
+		ts7x::ports::port8::word_type d, c = ctrl.read();
+
+		// Set LCD data pins as inputs.
+		data.set_dir(data.get_dir() & ~data_mask);
+		data7.set_dir(data7.get_dir() & ~data7_mask);
+
+		tries = 0;
+		do {
+			// De-assert RS and WR.
+			c = (c | ctrl_bit_wr) & ~ctrl_bit_rs;
+			ctrl.write(c);
+
+			// Sleep 100ns at least.
+			nssleep(100);
+
+			// Assert EN.
+			c |= ctrl_bit_en;
+			ctrl.write(c);
+
+			// Sleep 300ns at least.
+			nssleep(300);
+
+			// De-assert EN, read result
+
+			d = (data.read() & data_mask) | ((data7.read() & data7_mask) << 7);
+
+			// De-assert EN.
+			c &= ~ctrl_bit_en;
+			ctrl.write(c);
+
+			// Sleep 200ns at least.
+			nssleep(200);
+		} while ((d & data_bit_busy) != 0 && tries++ < 1000);
+
+		return (d & data_bit_busy) == 0;
 	}
 
 private:
-	ts7x::ports::dioport<ts7x::ports::port8> lcd_data;
-	ts7x::ports::dioport<ts7x::ports::port8> lcd_data7;
+	// Referenced in the manual as Port A (data) and C (data7).
+	ts7x::ports::dioport<ts7x::ports::port8> data, data7;
+	const ts7x::ports::port8::word_type data_mask, data7_mask;
+	const ts7x::ports::port8::word_type data_bit_busy;
 
-	const ts7x::ports::port8::word_type mask_lcd_data, mask_lcd_data7;
+	// Referenced in the manual as Port H.
+	ts7x::ports::dioport<ts7x::ports::port8> ctrl;
+	const ts7x::ports::port8::word_type ctrl_bit_en, ctrl_bit_rs, ctrl_bit_wr;
 
 };
 
@@ -673,7 +920,8 @@ public:
 	{
 		if (n > 1)
 			throw ts7x::stdio_error(EINVAL); // FIXME use the correct exception
-		mode = INVALID;
+
+		read_conf();
 	}
 
 private:
@@ -682,8 +930,14 @@ private:
 		MODE_EDGEQUADCNTR = 0x01,
 		MODE_INPULSTIMER = 0x02,
 		MODE_PWM = 0x03,
-		INVALID,
 	} mode;
+
+	void
+	read_conf()
+	{
+		ts7x::ports::port8::word_type c = conf.read();
+		mode = static_cast<mode_cfg>((c >> 6) & 0x03);
+	}
 
 	void
 	write_conf()
@@ -694,7 +948,6 @@ private:
 		case MODE_INPULSTIMER:
 		case MODE_PWM:
 			break;
-		case INVALID:
 		default:
 			throw ts7x::stdio_error(EINVAL); // FIXME use the correct exception
 		}
@@ -868,20 +1121,6 @@ private:
 
 }
 
-template <typename T> std::string
-num2hex(T value)
-{
-	std::ostringstream stream;
-
-	stream << "0x"
-		<< std::setfill('0')
-		<< std::setw(sizeof(T) * 2)
-		<< std::setbase(16)
-		<< static_cast<unsigned long long int>(value);
-
-	return stream.str();
-}
-
 int
 main(int argc, char *argv[])
 {
@@ -933,6 +1172,18 @@ main(int argc, char *argv[])
 		std::cout << "dumping registers..." << std::endl;
 		std::cout << "\tddr: " << num2hex(ddr.read()) << std::endl;
 		std::cout << "\tdata: " << num2hex(data.read()) << std::endl;
+
+#if 0
+		std::cout << "opening lcd..." << std::endl;
+		ts7300::devices::lcd lcd(memory);
+
+		std::cout << "initializing lcd..." << std::endl;
+		lcd.init();
+
+		std::string str = "testing...";
+		std::cout << "printing \"" << str << "\"..." << std::endl;
+		lcd.print(str);
+#endif
 
 	} catch (ts7x::stdio_error &e) {
 		std::cerr << __progname << ": stdio exception: " << e.what() << std::endl;
