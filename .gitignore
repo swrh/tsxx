@@ -2,3 +2,5 @@ tsxx
 *.o
 *.lo
 .libs
+.*.swp
+.swp
