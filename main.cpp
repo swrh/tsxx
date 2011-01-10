@@ -63,7 +63,7 @@ num2hex(T value)
 	return stream.str();
 }
 
-namespace ts7x {
+namespace tsxx {
 
 class
 exception
@@ -518,7 +518,7 @@ protected:
 
 template <class WordPort> class
 bitport
-	: public ts7x::interfaces::binport
+	: public tsxx::interfaces::binport
 {
 public:
 	bitport(WordPort port, unsigned int bitno)
@@ -572,9 +572,9 @@ private:
 
 };
 
-typedef wordport<ts7x::registers::reg8bits> port8;
-typedef wordport<ts7x::registers::reg16bits> port16;
-typedef wordport<ts7x::registers::reg32bits> port32;
+typedef wordport<tsxx::registers::reg8bits> port8;
+typedef wordport<tsxx::registers::reg16bits> port16;
+typedef wordport<tsxx::registers::reg32bits> port32;
 typedef bitport<port8> bport8;
 typedef bitport<port16> bport16;
 typedef bitport<port32> bport32;
@@ -640,14 +640,14 @@ namespace devices {
  */
 class
 dio1
-	: public ts7x::ports::dioport<ts7x::ports::port8>
+	: public tsxx::ports::dioport<tsxx::ports::port8>
 {
 	// TODO not tested yet
 private:
 	enum { BASE_ADDR = 0x80840000 };
 public:
-	dio1(ts7x::memory &memory)
-		: ts7x::ports::dioport<ts7x::ports::port8>(ts7x::ports::port8(memory.get_region(BASE_ADDR + 0x04)), ts7x::ports::port8(memory.get_region(BASE_ADDR + 0x14)))
+	dio1(tsxx::memory &memory)
+		: tsxx::ports::dioport<tsxx::ports::port8>(tsxx::ports::port8(memory.get_region(BASE_ADDR + 0x04)), tsxx::ports::port8(memory.get_region(BASE_ADDR + 0x14)))
 	{
 	}
 
@@ -697,12 +697,12 @@ lcd
 private:
 	enum { BASE_ADDR = 0x80840000 };
 public:
-	lcd(ts7x::memory &memory)
-		: data(ts7x::ports::port8(memory.get_region(BASE_ADDR + 0x00)), ts7x::ports::port8(memory.get_region(BASE_ADDR + 0x10))),
-		data7(ts7x::ports::port8(memory.get_region(BASE_ADDR + 0x08)), ts7x::ports::port8(memory.get_region(BASE_ADDR + 0x18))),
+	lcd(tsxx::memory &memory)
+		: data(tsxx::ports::port8(memory.get_region(BASE_ADDR + 0x00)), tsxx::ports::port8(memory.get_region(BASE_ADDR + 0x10))),
+		data7(tsxx::ports::port8(memory.get_region(BASE_ADDR + 0x08)), tsxx::ports::port8(memory.get_region(BASE_ADDR + 0x18))),
 		data_mask(0x7f), data7_mask(0x01),
 		data_bit_busy(0x80),
-		ctrl(ts7x::ports::port8(memory.get_region(BASE_ADDR + 0x40)), ts7x::ports::port8(memory.get_region(BASE_ADDR + 0x44))),
+		ctrl(tsxx::ports::port8(memory.get_region(BASE_ADDR + 0x40)), tsxx::ports::port8(memory.get_region(BASE_ADDR + 0x44))),
 		ctrl_bit_en(0x08), ctrl_bit_rs(0x10), ctrl_bit_wr(0x20)
 	{
 	}
@@ -773,7 +773,7 @@ public:
 		data.set_dir(data.get_dir() | data_mask);
 		data7.set_dir(data7.get_dir() | data7_mask);
 
-		ts7x::ports::port8::word_type c = ctrl.read();
+		tsxx::ports::port8::word_type c = ctrl.read();
 
 		for (const uint8_t *s = static_cast<const uint8_t *>(p); len-- > 0; s++) {
 			// Write data to be sent.
@@ -806,7 +806,7 @@ public:
 	void
 	command(uint8_t cmd)
 	{
-		ts7x::ports::port8::word_type c = ctrl.read();
+		tsxx::ports::port8::word_type c = ctrl.read();
 
 		// Set LCD data pins as outputs.
 		data.set_dir(data.get_dir() | data_mask);
@@ -848,7 +848,7 @@ public:
 	wait()
 	{
 		unsigned int tries;
-		ts7x::ports::port8::word_type d, c = ctrl.read();
+		tsxx::ports::port8::word_type d, c = ctrl.read();
 
 		// Set LCD data pins as inputs.
 		data.set_dir(data.get_dir() & ~data_mask);
@@ -887,13 +887,13 @@ public:
 
 private:
 	// Referenced in the manual as Port A (data) and C (data7).
-	ts7x::ports::dioport<ts7x::ports::port8> data, data7;
-	const ts7x::ports::port8::word_type data_mask, data7_mask;
-	const ts7x::ports::port8::word_type data_bit_busy;
+	tsxx::ports::dioport<tsxx::ports::port8> data, data7;
+	const tsxx::ports::port8::word_type data_mask, data7_mask;
+	const tsxx::ports::port8::word_type data_bit_busy;
 
 	// Referenced in the manual as Port H.
-	ts7x::ports::dioport<ts7x::ports::port8> ctrl;
-	const ts7x::ports::port8::word_type ctrl_bit_en, ctrl_bit_rs, ctrl_bit_wr;
+	tsxx::ports::dioport<tsxx::ports::port8> ctrl;
+	const tsxx::ports::port8::word_type ctrl_bit_en, ctrl_bit_rs, ctrl_bit_wr;
 
 };
 
@@ -911,7 +911,7 @@ public:
 	/**
 	 * @param n The number of the XDIO port. Can be 0 (XDIO1) or 1 (XDIO2).
 	 */
-	xdio(ts7x::memory &memory, unsigned int n)
+	xdio(tsxx::memory &memory, unsigned int n)
 		: conf(memory.get_region(BASE_ADDR + n * 4 + 0)),
 		reg1(memory.get_region(BASE_ADDR + n * 4 + 1)),
 		reg2(memory.get_region(BASE_ADDR + n * 4 + 2)),
@@ -919,7 +919,7 @@ public:
 		dio_port(reg1, reg2)
 	{
 		if (n > 1)
-			throw ts7x::stdio_error(EINVAL); // FIXME use the correct exception
+			throw tsxx::stdio_error(EINVAL); // FIXME use the correct exception
 
 		mode = UNINITIALIZED;
 	}
@@ -942,7 +942,7 @@ private:
 	void
 	read_conf()
 	{
-		ts7x::ports::port8::word_type c = conf.read();
+		tsxx::ports::port8::word_type c = conf.read();
 		mode = static_cast<mode_cfg>((c >> 6) & 0x03);
 	}
 
@@ -957,7 +957,7 @@ private:
 			break;
 		case UNINITIALIZED:
 		default:
-			throw ts7x::stdio_error(EINVAL); // FIXME use the correct exception
+			throw tsxx::stdio_error(EINVAL); // FIXME use the correct exception
 		}
 
 		conf.write(mode << 6);
@@ -977,17 +977,17 @@ public:
 	/**
 	 * Returns the DIO port.
 	 */
-	ts7x::ports::dioport<ts7x::ports::port8> &
+	tsxx::ports::dioport<tsxx::ports::port8> &
 	get_dio()
 	{
 		if (mode != MODE_DIO)
-			throw ts7x::stdio_error(EINVAL); // FIXME use the correct exception
+			throw tsxx::stdio_error(EINVAL); // FIXME use the correct exception
 		return dio_port;
 	}
 
 private:
-	ts7x::ports::port8 conf, reg1, reg2, reg3;
-	ts7x::ports::dioport<ts7x::ports::port8> dio_port;
+	tsxx::ports::port8 conf, reg1, reg2, reg3;
+	tsxx::ports::dioport<tsxx::ports::port8> dio_port;
 
 };
 
@@ -997,7 +997,7 @@ spi
 private:
 	enum { BASE_ADDR = 0x808a0000 };
 public:
-	spi(ts7x::memory &memory)
+	spi(tsxx::memory &memory)
 		: ctrl(memory.get_region(BASE_ADDR + 0x04)),
 		status(memory.get_region(BASE_ADDR + 0x0c)),
 		data(memory.get_region(BASE_ADDR + 0x08)),
@@ -1009,14 +1009,14 @@ public:
 
 public:
 	bool
-	add_chip(unsigned int id, ts7x::interfaces::binport &cs)
+	add_chip(unsigned int id, tsxx::interfaces::binport &cs)
 	{
 		if (chips.find(id) != chips.end())
 			return false;
 
 		cs.unset();
 
-		chips.insert(std::pair<unsigned int, ts7x::interfaces::binport &>(id, cs));
+		chips.insert(std::pair<unsigned int, tsxx::interfaces::binport &>(id, cs));
 
 		return true;
 	}
@@ -1041,7 +1041,7 @@ public:
 	bool
 	writenread(unsigned int id, const std::vector<uint8_t> &write_data, std::vector<uint8_t> &read_data)
 	{
-		std::map<unsigned int, ts7x::interfaces::binport &>::iterator chip = chips.find(id);
+		std::map<unsigned int, tsxx::interfaces::binport &>::iterator chip = chips.find(id);
 		if (chip != chips.end())
 			return false;
 
@@ -1066,12 +1066,12 @@ public:
 	}
 
 protected:
-	std::map<unsigned int, ts7x::interfaces::binport &> chips;
+	std::map<unsigned int, tsxx::interfaces::binport &> chips;
 
 private:
 	/// SPI registers.
-	ts7x::ports::port16 ctrl, status, data;
-	ts7x::ports::bport16 tx_bit, busy_bit, inp_bit;
+	tsxx::ports::port16 ctrl, status, data;
+	tsxx::ports::bport16 tx_bit, busy_bit, inp_bit;
 
 };
 
@@ -1081,8 +1081,8 @@ class
 board
 {
 public:
-	board(ts7x::memory &mem)
-		: memory(mem), xdio2(memory, 1), dio1(memory), lcd(memory)
+	board(tsxx::memory &mem)
+		: memory(mem), xdio2(memory, 1), dio1(memory), lcd(memory), spi(memory)
 	{
 	}
 
@@ -1098,11 +1098,12 @@ public:
 		//
 		// PS: Believe me, I've done this. I've seen the RLOD (Red Led
 		// Of Death). =(
-		ts7x::ports::bport8 eeprom_cs_bit(memory.get_region(0x23000000), 0);
+		tsxx::ports::bport8 eeprom_cs_bit(memory.get_region(0x23000000), 0);
 		eeprom_cs_bit.unset();
 
 		xdio2.init();
 		lcd.init();
+		spi.init();
 	}
 
 	inline ts7300::devices::xdio &
@@ -1123,12 +1124,19 @@ public:
 		return lcd;
 	}
 
+	inline ts7300::devices::spi &
+	get_spi()
+	{
+		return spi;
+	}
+
 private:
-	ts7x::memory &memory;
+	tsxx::memory &memory;
 
 	ts7300::devices::xdio xdio2;
 	ts7300::devices::dio1 dio1;
 	ts7300::devices::lcd lcd;
+	ts7300::devices::spi spi;
 
 };
 
@@ -1138,7 +1146,7 @@ int
 main(int argc, char *argv[])
 {
 	try {
-		ts7x::memory memory;
+		tsxx::memory memory;
 		if (!memory.open())
 			err(EXIT_FAILURE, "error opening memory");
 
@@ -1146,12 +1154,12 @@ main(int argc, char *argv[])
 		ts.init();
 
 		ts.get_lcd().print("testing...");
-	} catch (ts7x::stdio_error &e) {
+	} catch (tsxx::stdio_error &e) {
 		std::cerr << __progname << ": stdio exception: " << e.what() << std::endl;
 		exit(EXIT_FAILURE);
 
-	} catch (ts7x::exception &e) {
-		std::cerr << __progname << ": ts7x exception: " << e.what() << std::endl;
+	} catch (tsxx::exception &e) {
+		std::cerr << __progname << ": tsxx exception: " << e.what() << std::endl;
 		exit(EXIT_FAILURE);
 
 	} catch (std::exception &e) {
