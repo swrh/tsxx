@@ -38,11 +38,11 @@
 using tsxx::ts7300::devices::lcd;
 
 lcd::lcd(tsxx::system::memory &memory)
-	: data(tsxx::ports::port8(memory.get_region(BASE_ADDR + 0x00)), tsxx::ports::port8(memory.get_region(BASE_ADDR + 0x10))),
-	data7(tsxx::ports::port8(memory.get_region(BASE_ADDR + 0x08)), tsxx::ports::port8(memory.get_region(BASE_ADDR + 0x18))),
+	: data(memory.get_region(BASE_ADDR + 0x00), memory.get_region(BASE_ADDR + 0x10)),
+	data7(memory.get_region(BASE_ADDR + 0x08), memory.get_region(BASE_ADDR + 0x18)),
 	data_mask(0x7f), data7_mask(0x01),
 	data_bit_busy(0x80),
-	ctrl(tsxx::ports::port8(memory.get_region(BASE_ADDR + 0x40)), tsxx::ports::port8(memory.get_region(BASE_ADDR + 0x44))),
+	ctrl(memory.get_region(BASE_ADDR + 0x40), memory.get_region(BASE_ADDR + 0x44)),
 	ctrl_bit_en(0x08), ctrl_bit_rs(0x10), ctrl_bit_wr(0x20)
 {
 }

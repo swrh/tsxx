@@ -17,14 +17,14 @@ namespace devices
  */
 class
 dio1
-	: public tsxx::ports::dioport<tsxx::ports::port8>
+	: public tsxx::ports::dioport<tsxx::ports::port16>
 {
 	// TODO not tested yet
 private:
 	enum { BASE_ADDR = 0x80840000 };
 public:
 	dio1(tsxx::system::memory &memory)
-		: tsxx::ports::dioport<tsxx::ports::port8>(tsxx::ports::port8(memory.get_region(BASE_ADDR + 0x04)), tsxx::ports::port8(memory.get_region(BASE_ADDR + 0x14)))
+		: tsxx::ports::dioport<tsxx::ports::port16>(memory.get_region(BASE_ADDR + 0x04), memory.get_region(BASE_ADDR + 0x14))
 	{
 	}
 
@@ -117,13 +117,15 @@ public:
 public:
 	void init();
 
-	bool add_chip(unsigned int id, tsxx::interfaces::binport &cs);
+	int add_cs(tsxx::interfaces::binport &cs);
+	void clear_cs();
 
 	bool writenread(unsigned int id, std::vector<uint8_t> &rw_data);
 	bool writenread(unsigned int id, const std::vector<uint8_t> &write_data, std::vector<uint8_t> &read_data);
 
 protected:
-	std::map<unsigned int, tsxx::interfaces::binport &> chips;
+	unsigned int csi;
+	std::map<unsigned int, tsxx::interfaces::binport &> csmap;
 
 private:
 	/// SPI registers.

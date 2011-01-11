@@ -1,3 +1,5 @@
+#include <limits.h>
+
 #include <iostream>
 
 #include <tsxx/ts7300/devices.hpp>
@@ -12,19 +14,33 @@ spi::spi(tsxx::system::memory &memory)
 	busy_bit(status, 4),
 	inp_bit(status, 2)
 {
+	csi = 0;
 }
 
-bool
-spi::add_chip(unsigned int id, tsxx::interfaces::binport &cs)
+int
+spi::add_cs(tsxx::interfaces::binport &cs)
 {
-	if (chips.find(id) != chips.end())
-		return false;
+	while (csi <= INT_MAX && csmap.find(csi) == csmap.end())
+		csi++;
+
+	if (csi > INT_MAX) {
+		csi = 0;
+		return -1;
+	}
+
+	unsigned int id = csi++;
 
 	cs.unset();
 
-	chips.insert(std::pair<unsigned int, tsxx::interfaces::binport &>(id, cs));
+	csmap.insert(std::pair<unsigned int, tsxx::interfaces::binport &>(id, cs));
 
-	return true;
+	return static_cast<int>(id);
+}
+
+void
+spi::clear_cs()
+{
+	csmap.clear();
 }
 
 void
@@ -47,8 +63,8 @@ spi::writenread(unsigned int id, std::vector<uint8_t> &rw_data)
 bool
 spi::writenread(unsigned int id, const std::vector<uint8_t> &write_data, std::vector<uint8_t> &read_data)
 {
-	std::map<unsigned int, tsxx::interfaces::binport &>::iterator chip = chips.find(id);
-	if (chip != chips.end())
+	std::map<unsigned int, tsxx::interfaces::binport &>::iterator csit = csmap.find(id);
+	if (csit == csmap.end())
 		return false;
 
 	if (read_data.size() != write_data.size())
@@ -57,12 +73,12 @@ spi::writenread(unsigned int id, const std::vector<uint8_t> &write_data, std::ve
 	for (std::vector<uint8_t>::const_iterator w = write_data.begin(); w != write_data.end(); w++)
 		data.write(*w);
 
-	chip->second.set();
+	csit->second.set();
 
 	tx_bit.set();
 	FIXME(); while (busy_bit.get());
 
-	chip->second.unset();
+	csit->second.unset();
 
 	for (std::vector<uint8_t>::iterator w = read_data.begin(); w != read_data.end(); w++)
 		*w = data.read();
