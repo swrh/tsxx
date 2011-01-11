@@ -110,6 +110,7 @@ typedef bitport<port8> bport8;
 typedef bitport<port16> bport16;
 typedef bitport<port32> bport32;
 
+// WordPort
 /**
  * DIO (GPIO) port class.
  */
@@ -150,6 +151,13 @@ public:
 	read()
 	{
 		return data_port.read();
+	}
+
+public:
+	WordPort &
+	get_data_port()
+	{
+		return data_port;
 	}
 
 private:
