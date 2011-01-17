@@ -7,7 +7,7 @@ using tsxx::ts7300::devices::lcd;
 using tsxx::ts7300::devices::spi;
 
 board::board(tsxx::system::memory &mem)
-	: memory(mem), xdio2(memory, 1), dio1(memory), lcd(memory), spi(memory)
+	: memory(mem), xdio1(memory, 0), xdio2(memory, 1), dio1(memory), lcd(memory), spi(memory)
 {
 }
 
@@ -26,9 +26,21 @@ board::init()
 	tsxx::ports::bport8 eeprom_cs_bit(memory.get_region(0x23000000), 0);
 	eeprom_cs_bit.unset();
 
+	xdio1.init();
 	xdio2.init();
-	lcd.init();
+
+	// If we initialize the lcd object it will send commands to LCD device.
+	// As we don't know the TS-7300 board is connected to an LCD device, we
+	// don't do that.
+	//lcd.init();
+
 	spi.init();
+}
+
+xdio &
+board::get_xdio1()
+{
+	return xdio1;
 }
 
 xdio &

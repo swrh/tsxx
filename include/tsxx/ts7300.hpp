@@ -16,6 +16,7 @@ public:
 
 	void init();
 
+	ts7300::devices::xdio &get_xdio1();
 	ts7300::devices::xdio &get_xdio2();
 	ts7300::devices::dio1 &get_dio1();
 	ts7300::devices::lcd &get_lcd();
@@ -24,6 +25,7 @@ public:
 private:
 	tsxx::system::memory &memory;
 
+	ts7300::devices::xdio xdio1;
 	ts7300::devices::xdio xdio2;
 	ts7300::devices::dio1 dio1;
 	ts7300::devices::lcd lcd;
