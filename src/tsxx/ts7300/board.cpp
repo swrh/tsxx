@@ -23,8 +23,11 @@ board::init()
 	//
 	// PS: Believe me, I've done this. I've seen the RLOD (Red Led
 	// Of Death). =(
-	tsxx::ports::bport8 eeprom_cs_bit(memory.get_region(0x23000000), 0);
-	eeprom_cs_bit.unset();
+	{
+		tsxx::ports::port8 eeprom_cs_port(memory.get_region(0x23000000));
+		tsxx::ports::bport8 eeprom_cs_bit(eeprom_cs_port, 0);
+		eeprom_cs_bit.unset();
+	}
 
 	xdio1.init();
 	xdio2.init();
