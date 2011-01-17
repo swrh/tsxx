@@ -15,34 +15,6 @@ public:
 
 };
 
-class
-triggerport
-{
-public:
-	triggerport(binport &port, bool updown = false)
-		: bit(port), updown(updown)
-	{
-	}
-
-	void
-	fire()
-	{
-		if (updown) {
-			bit.set();
-			bit.unset();
-		} else {
-			bit.unset();
-			bit.set();
-		}
-	}
-
-private:
-	binport &bit;
-	bool updown;
-
-};
-
-
 }
 }
 
