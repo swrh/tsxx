@@ -5,44 +5,46 @@
 #include <tsxx/registers.hpp>
 #include <tsxx/system.hpp>
 
-namespace tsxx
-{
-namespace ports
+namespace
+tsxx
 {
 
-// WordPort
-template <class WordReg, class CopyableMemoryRegion = tsxx::system::memory_region_window> class
+namespace
+ports
+{
+
+template <class WordReg> class
 wordport
 {
 public:
-	wordport(CopyableMemoryRegion region)
+	wordport(tsxx::system::memory_region_window region)
 		: mem(region), reg(mem.get_pointer())
 	{
 	}
 
-	wordport(CopyableMemoryRegion region, unsigned int param)
+	wordport(tsxx::system::memory_region_window region, unsigned int param)
 		: mem(region), reg(mem.get_pointer(), param)
 	{
 	}
 
-	// Force data access using the "strb" instruction -- don't rely on
-	// compiler optimization by using pointers.
+	// WordPort
+public:
+	typedef typename WordReg::word_type word_type;
+
 	inline void
-	write(typename WordReg::word_type word)
+	write(word_type word)
 	{
 		reg.write(word);
 	}
 
-	inline typename WordReg::word_type
+	inline word_type
 	read()
 	{
 		return reg.read();
 	}
 
-	typedef typename WordReg::word_type word_type;
-
 protected:
-	CopyableMemoryRegion mem;
+	tsxx::system::memory_region_window mem;
 	WordReg reg;
 
 };
@@ -52,7 +54,7 @@ bitport
 	: public tsxx::interfaces::binport
 {
 public:
-	bitport(WordPort port, unsigned int bitno)
+	bitport(WordPort &port, unsigned int bitno)
 		: wordport(port), mask(1 << bitno)
 	{
 	}
@@ -63,8 +65,6 @@ public:
 		write(false);
 	}
 
-	// Force data access using the "strh" instruction -- don't rely on
-	// compiler optimization by using pointers.
 	inline void
 	set()
 	{
@@ -98,7 +98,7 @@ protected:
 	}
 
 private:
-	WordPort wordport;
+	WordPort &wordport;
 	const typename WordPort::word_type mask;
 
 };
@@ -110,7 +110,6 @@ typedef bitport<port8> bport8;
 typedef bitport<port16> bport16;
 typedef bitport<port32> bport32;
 
-// WordPort
 /**
  * DIO (GPIO) port class.
  */
@@ -123,6 +122,23 @@ public:
 	{
 	}
 
+	// WordPort
+public:
+	typedef typename WordPort::word_type word_type;
+
+	void
+	write(word_type word)
+	{
+		get_data_port().write(word);
+	}
+
+	word_type
+	read()
+	{
+		return get_data_port().read();
+	}
+
+public:
 	/**
 	 * Sets the DIO pins direction.
 	 *
@@ -130,31 +146,19 @@ public:
 	 * output and with 0 for input.
 	 */
 	void
-	set_dir(typename WordPort::word_type dir)
+	set_dir(word_type dir)
 	{
 		ddr_port.write(dir);
 	}
 
-	typename WordPort::word_type
+	word_type
 	get_dir()
 	{
 		return ddr_port.read();
 	}
 
-	void
-	write(typename WordPort::word_type word)
-	{
-		data_port.write(word);
-	}
-
-	typename WordPort::word_type
-	read()
-	{
-		return data_port.read();
-	}
-
 public:
-	WordPort &
+	inline WordPort &
 	get_data_port()
 	{
 		return data_port;
