@@ -17,6 +17,50 @@ exception
 };
 
 class
+invalid_argument
+: public exception
+{
+};
+
+class
+invalid_state
+: public exception
+{
+};
+
+class
+not_enough_memory
+: public exception
+{
+};
+
+class
+unknown_error
+: public exception
+{
+public:
+	unknown_error(const char *_file, unsigned int _line)
+		: file(_file), line(_line)
+	{
+	}
+
+	virtual ~unknown_error() throw()
+	{
+	}
+
+	virtual const char *
+	what() const throw()
+	{
+		return "TODO";
+	}
+
+private:
+	const char *file;
+	unsigned int line;
+
+};
+
+class
 stdio_error
 : public exception
 {
