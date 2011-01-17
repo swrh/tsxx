@@ -57,7 +57,6 @@ private:
 };
 typedef boost::shared_ptr<memory_region> memory_region_ptr;
 
-// CopyableMemoryRegion
 class
 memory_region_window
 {
@@ -101,7 +100,7 @@ private:
 inline void
 nssleep(unsigned int ns)
 {
-	volatile unsigned int loop = ns * 3;
+	volatile unsigned int loop = ns * 5;
 	asm volatile (
 		"1:\n"
 		"subs %1, %1, #1;\n"
