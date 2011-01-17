@@ -9,10 +9,10 @@ xdio::xdio(tsxx::system::memory &memory, unsigned int n)
 	reg1(memory.get_region(BASE_ADDR + n * 4 + 1)),
 	reg2(memory.get_region(BASE_ADDR + n * 4 + 2)),
 	reg3(memory.get_region(BASE_ADDR + n * 4 + 3)),
-	dio_port(reg1, reg2)
+	dio_port(reg2, reg1)
 {
 	if (n > 1)
-		throw tsxx::exceptions::stdio_error(EINVAL); // FIXME use the correct exception
+		throw tsxx::exceptions::invalid_argument();
 
 	mode = UNINITIALIZED;
 }
@@ -41,7 +41,7 @@ xdio::write_conf()
 		break;
 	case UNINITIALIZED:
 	default:
-		throw tsxx::exceptions::stdio_error(EINVAL); // FIXME use the correct exception
+		throw tsxx::exceptions::invalid_state();
 	}
 
 	conf.write(mode << 6);
@@ -52,12 +52,4 @@ xdio::set_mode_dio()
 {
 	mode = MODE_DIO;
 	write_conf();
-}
-
-tsxx::ports::dioport<tsxx::ports::port8> &
-xdio::get_dio()
-{
-	if (mode != MODE_DIO)
-		throw tsxx::exceptions::stdio_error(EINVAL); // FIXME use the correct exception
-	return dio_port;
 }

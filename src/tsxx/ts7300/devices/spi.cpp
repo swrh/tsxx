@@ -14,33 +14,6 @@ spi::spi(tsxx::system::memory &memory)
 	busy_bit(status, 4),
 	inp_bit(status, 2)
 {
-	csi = 0;
-}
-
-int
-spi::add_cs(tsxx::interfaces::binport &cs)
-{
-	while (csi <= INT_MAX && csmap.find(csi) == csmap.end())
-		csi++;
-
-	if (csi > INT_MAX) {
-		csi = 0;
-		return -1;
-	}
-
-	unsigned int id = csi++;
-
-	cs.unset();
-
-	csmap.insert(std::pair<unsigned int, tsxx::interfaces::binport &>(id, cs));
-
-	return static_cast<int>(id);
-}
-
-void
-spi::clear_cs()
-{
-	csmap.clear();
 }
 
 void
@@ -54,35 +27,29 @@ spi::init()
 		(void)data.read();
 }
 
-bool
-spi::writenread(unsigned int id, std::vector<uint8_t> &rw_data)
+void
+spi::write_read(tsxx::interfaces::binport &cs, const void *wrp, std::size_t wrsiz, void *rdp, std::size_t rdsiz)
 {
-	return writenread(id, rw_data, rw_data);
-}
+	const uint8_t *cp;
+	uint8_t *p;
 
-bool
-spi::writenread(unsigned int id, const std::vector<uint8_t> &write_data, std::vector<uint8_t> &read_data)
-{
-	std::map<unsigned int, tsxx::interfaces::binport &>::iterator csit = csmap.find(id);
-	if (csit == csmap.end())
-		return false;
+	if (wrsiz > rdsiz)
+		tsxx::exceptions::invalid_argument();
 
-	if (read_data.size() != write_data.size())
-		read_data.resize(write_data.size());
+	if (rdsiz > wrsiz)
+		rdsiz = wrsiz;
 
-	for (std::vector<uint8_t>::const_iterator w = write_data.begin(); w != write_data.end(); w++)
-		data.write(*w);
+	for (cp = static_cast<const uint8_t *>(wrp); wrsiz > 0; cp++, wrsiz--)
+		data.write(*cp);
 
-	csit->second.set();
+	cs.set();
 
 	tx_bit.set();
 	FIXME(); while (busy_bit.get());
 
-	csit->second.unset();
+	cs.unset();
 
-	for (std::vector<uint8_t>::iterator w = read_data.begin(); w != read_data.end(); w++)
-		*w = data.read();
+	for (p = static_cast<uint8_t *>(rdp); rdsiz > 0; p++, rdsiz--)
+		*p = data.read();
 	tx_bit.unset();
-
-	return true;
 }
