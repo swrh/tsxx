@@ -6,35 +6,6 @@
 #define LCD_CMD_ROW3			(0x80 | 0x54)
 #define LCD_CMD_ROW(x)			(x == 1 ? LCD_CMD_ROW1 : x == 2 ? LCD_CMD_ROW2 : x == 3 ? LCD_CMD_ROW3 : LCD_CMD_ROW0)
 
-#define LCD_CMD_CLEAR			0x0001
-#define LCD_CMD_HOME			0x0002
-
-#define LCD_CMD_ENTRY			0x0004
-#define LCD_BIT_ENTRY_DIR_RIGHT		0x0002
-#define LCD_BIT_ENTRY_DIR_LEFT		0x0000
-
-#define LCD_CMD_CTRL			0x0008
-#define LCD_BIT_CTRL_BLNK_OFF		0x0000
-#define LCD_BIT_CTRL_BLNK_ON		0x0001
-#define LCD_BIT_CTRL_CUR_OFF		0x0000
-#define LCD_BIT_CTRL_CUR_ON		0x0002
-#define LCD_BIT_CTRL_DSP_OFF		0x0000
-#define LCD_BIT_CTRL_DSP_ON		0x0004
-
-#define LCD_CMD_FNSET			0x0020
-#define LCD_BIT_FNSET_FONT_5x8		0x0000
-#define LCD_BIT_FNSET_FONT_5x11		0x0004
-#define LCD_BIT_FNSET_NLINES_1LIN	0x0000
-#define LCD_BIT_FNSET_NLINES_2LIN	0x0008
-#define LCD_BIT_FNSET_DATLEN_4BIT	0x0000
-#define LCD_BIT_FNSET_DATLEN_8BIT	0x0010
-
-#define LCD_CMD_CGRAM			0x0040
-#define LCD_CMD_DDRAM			0x0080
-#define LCD_CMD_RDSTAT			0x0100
-#define LCD_CMD_WRDATA			0x0200
-#define LCD_CMD_RDDATA			0x0300
-
 using tsxx::ts7300::devices::lcd;
 
 lcd::lcd(tsxx::system::memory &memory)
