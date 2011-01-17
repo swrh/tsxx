@@ -24,10 +24,8 @@ memory::get_region_size() const
 bool
 memory::open()
 {
-	if (is_opened()) {
-		errno = EINVAL;
-		return false;
-	}
+	if (is_opened())
+		return true;
 
 	// We must use O_SYNC argument or else we WILL crash or get
 	// random access while acessing registers.
