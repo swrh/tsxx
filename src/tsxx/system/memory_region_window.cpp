@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <stdint.h>
 
 #include <tsxx/system.hpp>
 
