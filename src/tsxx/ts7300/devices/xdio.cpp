@@ -12,7 +12,7 @@ xdio::xdio(tsxx::system::memory &memory, unsigned int n)
 	dio_port(reg2, reg1)
 {
 	if (n > 1)
-		throw tsxx::exceptions::invalid_argument();
+		throw tsxx::exceptions::invalid_argument(__FILE__, __LINE__);
 
 	mode = UNINITIALIZED;
 }
