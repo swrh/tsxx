@@ -46,7 +46,7 @@ public:
 	inline word_type
 	read()
 	{
-		return (dio17.read() & dio17_mask) | ((dio8.read() & dio8_mask) << 1);
+		return (dio17.read() & dio17_mask) | ((dio8.read() << 1) & dio8_mask);
 	}
 
 public:
