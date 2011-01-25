@@ -315,7 +315,7 @@ public:
 	inline void
 	write_read(std::vector<uint8_t> &rw_data)
 	{
-		port->write_read(cs, rw_data);
+		write_read(rw_data, rw_data);
 	}
 
 	inline void
