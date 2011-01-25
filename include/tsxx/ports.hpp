@@ -54,21 +54,21 @@ bitport
 	: public tsxx::interfaces::binport
 {
 public:
-	bitport(WordPort &port, unsigned int bitno)
-		: wordport(port), mask(1 << bitno)
+	bitport(WordPort &port, unsigned int bitno, bool _inverted = false)
+		: wordport(port), mask(1 << bitno), inverted(_inverted)
 	{
 	}
 
 	inline void
 	unset()
 	{
-		write(false);
+		write(inverted);
 	}
 
 	inline void
 	set()
 	{
-		write(true);
+		write(!inverted);
 	}
 
 	inline bool
@@ -100,6 +100,8 @@ protected:
 private:
 	WordPort &wordport;
 	const typename WordPort::word_type mask;
+
+	const bool inverted;
 
 };
 
