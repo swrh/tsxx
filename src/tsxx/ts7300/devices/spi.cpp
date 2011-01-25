@@ -34,7 +34,7 @@ spi::write_read(tsxx::interfaces::binport &cs, const void *wrp, std::size_t wrsi
 	uint8_t *p;
 
 	if (wrsiz > rdsiz)
-		tsxx::exceptions::invalid_argument();
+		tsxx::exceptions::invalid_argument(__FILE__, __LINE__);
 
 	if (rdsiz > wrsiz)
 		rdsiz = wrsiz;
@@ -46,10 +46,9 @@ spi::write_read(tsxx::interfaces::binport &cs, const void *wrp, std::size_t wrsi
 
 	tx_bit.set();
 	FIXME(); while (busy_bit.get());
-
-	cs.unset();
-
 	for (p = static_cast<uint8_t *>(rdp); rdsiz > 0; p++, rdsiz--)
 		*p = data.read();
 	tx_bit.unset();
+
+	cs.unset();
 }
