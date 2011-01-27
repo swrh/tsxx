@@ -34,7 +34,7 @@ spi::write_read(tsxx::interfaces::binport &cs, const void *wrp, std::size_t wrsi
 	uint8_t *p;
 
 	if (wrsiz > rdsiz)
-		tsxx::exceptions::invalid_argument(__FILE__, __LINE__);
+		throw tsxx::exceptions::invalid_argument(__FILE__, __LINE__);
 
 	if (rdsiz > wrsiz)
 		rdsiz = wrsiz;
