@@ -14,6 +14,18 @@ board::board(tsxx::system::memory &mem)
 void
 board::init()
 {
+	// Unlock software lock.
+	{
+		tsxx::ports::port32 port(memory.get_region(0x809300c0));
+		port.write(0x000000aa);
+	}
+
+	// Disable DMA/enable GPIO pins.
+	{
+		tsxx::ports::port32 port(memory.get_region(0x80930080));
+		port.write(0x08140d00);
+	}
+
 	// ATTENTION: Always set this bit to 0 or else you might
 	// "brick" your board forever while using the SPI bus. Setting
 	// it to one will enable the EEPROM boot chip and you might end
