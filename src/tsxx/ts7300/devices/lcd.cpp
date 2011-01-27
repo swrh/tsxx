@@ -1,3 +1,5 @@
+#include <tsxx/utils.hpp>
+
 #include <tsxx/ts7300/devices.hpp>
 
 #define LCD_CMD_ROW0			(0x80 | 0x00)
@@ -7,6 +9,7 @@
 #define LCD_CMD_ROW(x)			(x == 1 ? LCD_CMD_ROW1 : x == 2 ? LCD_CMD_ROW2 : x == 3 ? LCD_CMD_ROW3 : LCD_CMD_ROW0)
 
 using tsxx::ts7300::devices::lcd;
+using tsxx::utils::cpu;
 
 lcd::lcd(tsxx::system::memory &memory)
 	: data(memory.get_region(BASE_ADDR + 0x00), memory.get_region(BASE_ADDR + 0x10)),
@@ -96,21 +99,21 @@ lcd::print(const void *p, std::size_t len)
 		ctrl.write(c);
 
 		// Sleep 100ns at least.
-		tsxx::system::nssleep(100);
+		cpu::nssleep(100);
 
 		// Assert EN.
 		c |= ctrl_bit_en;
 		ctrl.write(c);
 
 		// Sleep 300ns at least.
-		tsxx::system::nssleep(300);
+		cpu::nssleep(300);
 
 		// De-assert EN.
 		c &= ~ctrl_bit_en;
 		ctrl.write(c);
 
 		// Sleep 200ns at least.
-		tsxx::system::nssleep(200);
+		cpu::nssleep(200);
 	}
 }
 
@@ -138,21 +141,21 @@ lcd::command(uint8_t cmd)
 	ctrl.write(c);
 
 	// Sleep 100ns at least.
-	tsxx::system::nssleep(100);
+	cpu::nssleep(100);
 
 	// step 3, assert EN
 	c |= ctrl_bit_en;
 	ctrl.write(c);
 
 	// Sleep 300ns at least.
-	tsxx::system::nssleep(300);
+	cpu::nssleep(300);
 
 	// step 5, de-assert EN
 	c &= ~ctrl_bit_en; // de-assert EN
 	ctrl.write(c);
 
 	// Sleep 200ns at least.
-	tsxx::system::nssleep(200);
+	cpu::nssleep(200);
 }
 
 bool
@@ -172,14 +175,14 @@ lcd::wait()
 		ctrl.write(c);
 
 		// Sleep 100ns at least.
-		tsxx::system::nssleep(100);
+		cpu::nssleep(100);
 
 		// Assert EN.
 		c |= ctrl_bit_en;
 		ctrl.write(c);
 
 		// Sleep 300ns at least.
-		tsxx::system::nssleep(300);
+		cpu::nssleep(300);
 
 		// De-assert EN, read result
 
@@ -190,7 +193,7 @@ lcd::wait()
 		ctrl.write(c);
 
 		// Sleep 200ns at least.
-		tsxx::system::nssleep(200);
+		cpu::nssleep(200);
 	} while ((d & data_bit_busy) != 0 && tries++ < 1024);
 
 	return (d & data_bit_busy) == 0;

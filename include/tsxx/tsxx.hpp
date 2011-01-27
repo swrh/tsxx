@@ -6,6 +6,7 @@
 #include <tsxx/ports.hpp>
 #include <tsxx/registers.hpp>
 #include <tsxx/system.hpp>
+#include <tsxx/utils.hpp>
 
 #include <tsxx/ts7300.hpp>
 

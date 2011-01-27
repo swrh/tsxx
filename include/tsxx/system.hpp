@@ -93,22 +93,6 @@ private:
 
 };
 
-// TODO Calibrate this function.
-/**
- * @warning This function hasn't been calibrated yet.
- */
-inline void
-nssleep(unsigned int ns)
-{
-	volatile unsigned int loop = ns * 5;
-	asm volatile (
-		"1:\n"
-		"subs %1, %1, #1;\n"
-		"bne 1b;\n"
-		: "=r" ((loop)) : "r" ((loop))
-	);
-}
-
 }
 }
 
