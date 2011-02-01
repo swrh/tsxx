@@ -18,5 +18,7 @@ SRCS=			\
 
 INCDIRS=		include
 CROSS_COMPILE=		arm-linux-gnu-
+CXXFLAGS+=		-fPIC -DPIC
+CFLAGS+=		-fPIC -DPIC
 
 include mk/build.mk
